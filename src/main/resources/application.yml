@@ -1,0 +1,36 @@
+wiinvent:
+  mysql:
+    datasource:
+      jdbc-url: jdbc:mysql://localhost:3306/gaming_db?useUnicode=yes&characterEncoding=UTF-8
+      username: root
+      password: Hiuchang2207!
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        connectionTimeout: 30000 #30s
+        idleTimeout: 600000 #10 minutes
+        maxLifetime: 1800000 #30 minutes
+        minimumIdle: 10
+        maximumPoolSize: 5
+spring:
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+  cache:
+      type: redis
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 60000
+    lettuce:
+      pool:
+        min-idle: 5
+        max-idle: 10
+        max-active: 8
+        max-wait: 1ms
+      shutdown-timeout: 100ms
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+jwt:
+  secret_key: c2VjcmV0X2tleQ==
+  ttl: 3600000 # 1h

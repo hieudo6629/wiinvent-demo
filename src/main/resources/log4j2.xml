@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="trace">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c{1}.%M:%L - %msg%n"/>
+        </Console>
+
+        <RollingFile name="Demo_INFO" filename="logs/demo.log"
+                     filepattern="logs/demo.092.1.%d{YYYY-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss} %-5p %c{1}.%M:%L %msg%n"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="1024 MB"/>
+                <TimeBasedTriggeringPolicy/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="logs">
+                    <IfFileName glob="demo.*.log.gz" />
+                    <IfLastModified age="P7D" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+        <RollingFile name="Demo_ERROR" filename="logs/demo_error.log"
+                     filepattern="logs/demo_error.%d{YYYY-MM-dd}.log.gz">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss} %-5p %c{1}.%M:%L %msg%n"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="300 MB"/>
+            </Policies>
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <DefaultRolloverStrategy>
+                <Delete basePath="logs">
+                    <IfFileName glob="demo_error.*.log.gz" />
+                    <IfLastModified age="P3D" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="Demo_INFO"/>
+            <AppenderRef ref="Demo_ERROR"/>
+        </Root>
+    </Loggers>
+</Configuration>
+

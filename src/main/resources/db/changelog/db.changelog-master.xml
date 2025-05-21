@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <!-- Tạo bảng users -->
+    <changeSet id="1" author="admin" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="users"/>
+            </not>
+        </preConditions>
+        <createTable tableName="users">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="username" type="varchar(32)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="password" type="varchar(32)"/>
+            <column name="avatar" type="varchar(255)"/>
+            <column name="birthday" type="date"/>
+            <column name="created_at" type="timestamp"/>
+            <column name="gender" type="int"/>
+            <column name="lotus_point" type="int"/>
+            <column name="phone_number" type="varchar(20)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="full_name" type="varchar(255)"/>
+            <column name="country_code" type="varchar(5)"/>
+            <column name="language_code" type="varchar(5)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Tạo bảng attendance -->
+    <changeSet id="2" author="admin" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="attendance"/>
+            </not>
+        </preConditions>
+        <createTable tableName="attendance">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="checkin_date" type="date"/>
+            <column name="point" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="FK_attendance_user"
+                             references="users(id)"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Tạo bảng attendance_config -->
+    <changeSet id="3" author="admin" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="attendance_config"/>
+            </not>
+        </preConditions>
+        <createTable tableName="attendance_config">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="day_number" type="int">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="extra_point" type="int"/>
+            <column name="name" type="varchar(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Tạo bảng point_history -->
+    <changeSet id="4" author="admin" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="point_history"/>
+            </not>
+        </preConditions>
+        <createTable tableName="point_history">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="action_type" type="enum('ADD','SUBTRACT')">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="datetime(6)"/>
+            <column name="note" type="varchar(255)"/>
+            <column name="point" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="FK_point_history_user"
+                             references="users(id)"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
