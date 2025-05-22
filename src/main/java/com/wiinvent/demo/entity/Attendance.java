@@ -16,6 +16,15 @@ public class Attendance {
     private LocalDate checkinDate;
     private int point;
 
+    public Attendance(User user, LocalDate checkinDate, int point) {
+        this.user = user;
+        this.checkinDate = checkinDate;
+        this.point = point;
+    }
+
+    public Attendance() {
+    }
+
     public Long getId() {
         return id;
     }

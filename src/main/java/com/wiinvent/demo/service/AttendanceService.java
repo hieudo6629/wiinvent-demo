@@ -1,9 +1,6 @@
 package com.wiinvent.demo.service;
 
-import com.wiinvent.demo.controller.dto.AttendanceDTO;
-import com.wiinvent.demo.controller.dto.ListPointHistoryDTO;
-import com.wiinvent.demo.controller.dto.MarkAttendanceDTO;
-import com.wiinvent.demo.controller.dto.PointHistoryDTO;
+import com.wiinvent.demo.controller.dto.*;
 import com.wiinvent.demo.entity.Attendance;
 import com.wiinvent.demo.entity.AttendanceConfig;
 import com.wiinvent.demo.entity.PointHistory;
@@ -15,6 +12,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.StoredProcedureQuery;
+import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +46,8 @@ public class AttendanceService {
     private CacheService cacheService;
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private UserService userService;
 
     // check user đã điểm danh
     public boolean checkAttendance(Long userId, LocalDate today) {
@@ -55,47 +55,62 @@ public class AttendanceService {
     }
 
     // điểm danh
+    @Transactional
     public MarkAttendanceDTO markAttendance(Long userId) {
         MarkAttendanceDTO markAttendanceDTO = new MarkAttendanceDTO();
-        if (!acquireLock(userId, "mark")) {
+        User user = entityManager.getReference(User.class, userId);
+        if (!acquireLock(user.getId(), "mark")) {
             // check khóa, tránh click quá nhanh
             markAttendanceDTO.setStatusCode(400);
             markAttendanceDTO.setDesc("Checkin fail, please try again later!");
             return markAttendanceDTO;
         }
         LocalDate today = LocalDate.now();
-        if (checkAttendance(userId, today)) {
+        if (checkAttendance(user.getId(), today)) {
             markAttendanceDTO.setStatusCode(400);
             markAttendanceDTO.setDesc("You have checked in today!");
             return markAttendanceDTO;
         }
         LocalDate firstDay = today.with(TemporalAdjusters.firstDayOfMonth());
         LocalDate lastDay = today.with(TemporalAdjusters.lastDayOfMonth());
-        long checkinInMonth = attendanceRepository.countCheckinInMonth(userId, firstDay, lastDay);
+        long checkinInMonth = attendanceRepository.countCheckinInMonth(user.getId(), firstDay, lastDay);
         AttendanceConfig attendanceConfig = lotusPointLoader.getAttendanceInfo((int) (checkinInMonth + 1));
         try {
-            callUpdatePoints(
-                    userId,
-                    attendanceConfig.getExtraPoint(),
-                    "update_points"
-            );
+//            callUpdatePoints(
+//                    userId,
+//                    attendanceConfig.getExtraPoint(),
+//                    "update_points"
+//            );
+            // lưu log điểm danh
+            int point = attendanceConfig.getExtraPoint();
+            Attendance attendance = new Attendance(user, today, point);
+            attendanceRepository.save(attendance);
+            // cộng điểm cho user
+            UserLotusDTO userLotusDTO = userService.getUserLotusDTO(userId);
+            user.setLotusPoint(userLotusDTO.getLotusPoint() + point);
+            // lưu lịch sử cộng điểm
+            PointHistory pointHistory = new PointHistory(user, PointHistory.ActionType.ADD, point, "Cập nhật điểm: +" + point);
+            pointHistoryRepository.save(pointHistory);
+
             checkinInMonth++;
             markAttendanceDTO.setStatusCode(200);
             markAttendanceDTO.setDesc("Checkin successful!");
             // update cache
-            cacheService.updateCheckinInMonth(userId, checkinInMonth);
-            cacheService.updateUserInfo(userId, attendanceConfig.getExtraPoint(), "add");
-            cacheService.updateListAttendance(userId);
-            cacheService.removeCacheHistory(userId);
+            cacheService.updateCheckinInMonth(user.getId(), checkinInMonth);
+            cacheService.updateUserInfo(user.getId(), user.getLotusPoint());
+            cacheService.updateListAttendance(user.getId());
+            cacheService.removeCacheHistory(user.getId());
             // xóa khóa
-            releaseLock(userId, "mark");
+            releaseLock(user.getId(), "mark");
             return markAttendanceDTO;
-        } catch (Exception e) {
-            log.error("markAttendance|UserId|" + userId + "|Point|" + attendanceConfig.getExtraPoint() + "|Exception|" + e.getMessage(), e);
+        } catch (
+                Exception e) {
+            log.error("markAttendance|UserId|" + user.getId() + "|Point|" + attendanceConfig.getExtraPoint() + "|Exception|" + e.getMessage(), e);
             markAttendanceDTO.setStatusCode(500);
             markAttendanceDTO.setDesc("Internal error, please try again later!");
             return markAttendanceDTO;
         }
+
     }
 
     public void callUpdatePoints(Long userId, int point, String transactionName) {
@@ -171,41 +186,43 @@ public class AttendanceService {
     }
 
     // trừ điểm
+    @Transactional
     public MarkAttendanceDTO subtractPoint(Long userId, int point) {
         MarkAttendanceDTO markAttendanceDTO = new MarkAttendanceDTO();
-        if (!acquireLock(userId, "sub")) {
+        User user = entityManager.getReference(User.class, userId);
+        if (!acquireLock(user.getId(), "sub")) {
             // check lock, tránh click quá nhanh
             markAttendanceDTO.setStatusCode(400);
             markAttendanceDTO.setDesc("Subtract point fail, please try again later!");
             return markAttendanceDTO;
         }
-        Optional<User> user = userRepository.findById(userId);
-        if (user.isEmpty()) {
-            markAttendanceDTO.setStatusCode(400);
-            markAttendanceDTO.setDesc("UserId does not exist!");
-            return markAttendanceDTO;
-        }
-        if (user.get().getLotusPoint() < point) {
+        if (user.getLotusPoint() < point) {
             markAttendanceDTO.setStatusCode(400);
             markAttendanceDTO.setDesc("You don't have enough points!");
             return markAttendanceDTO;
         }
         try {
-            callUpdatePoints(
-                    userId,
-                    point,
-                    "subtract_points"
-            );
+//            callUpdatePoints(
+//                    userId,
+//                    point,
+//                    "subtract_points"
+//            );
+            // trừ điểm user
+            UserLotusDTO userLotusDTO = userService.getUserLotusDTO(userId);
+            user.setLotusPoint(userLotusDTO.getLotusPoint() - point);
+            // lưu lịch sử trừ điểm
+            PointHistory pointHistory = new PointHistory(user, PointHistory.ActionType.SUBTRACT, point, "Cập nhật điểm: -" + point);
+            pointHistoryRepository.save(pointHistory);
             markAttendanceDTO.setStatusCode(200);
             markAttendanceDTO.setDesc("Subtract points successful!");
             // update cache
-            cacheService.removeCacheHistory(userId);
-            cacheService.updateUserInfo(userId, point, "sub");
+            cacheService.removeCacheHistory(user.getId());
+            cacheService.updateUserInfo(user.getId(), user.getLotusPoint());
             // xóa khóa
-            releaseLock(userId, "sub");
+            releaseLock(user.getId(), "sub");
             return markAttendanceDTO;
         } catch (Exception e) {
-            log.error("subtractPoint|UserId|" + userId + "|Point|" + point + "|Exception|" + e.getMessage(), e);
+            log.error("subtractPoint|UserId|" + user.getId() + "|Point|" + point + "|Exception|" + e.getMessage(), e);
             markAttendanceDTO.setStatusCode(500);
             markAttendanceDTO.setDesc("Internal error, please try again later!");
             return markAttendanceDTO;
