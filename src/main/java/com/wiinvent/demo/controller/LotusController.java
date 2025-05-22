@@ -145,7 +145,6 @@ public class LotusController {
             long start = System.currentTimeMillis();
             log.info("getPointHistory|UserId|" + userId + "|Page|" + page + "|size|" + size + "|START");
             ListPointHistoryDTO listPointHistoryDTO = new ListPointHistoryDTO();
-
             if (!userService.checkExistUser(userId)) {
                 listPointHistoryDTO.setStatusCode(404);
                 listPointHistoryDTO.setDesc("UserId does not exist!");
