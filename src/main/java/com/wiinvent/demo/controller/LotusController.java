@@ -115,6 +115,11 @@ public class LotusController {
                 markAttendanceDTO.setDesc("Point must be greater than 0!");
                 return ResponseEntity.badRequest().body(markAttendanceDTO);
             }
+            if (!userService.checkExistUser(userId)) {
+                markAttendanceDTO.setStatusCode(404);
+                markAttendanceDTO.setDesc("UserId does not exist!");
+                return ResponseEntity.badRequest().body(markAttendanceDTO);
+            }
             markAttendanceDTO = attendanceService.subtractPoint(userId, point);
             long proc = System.currentTimeMillis() - start;
             log.info("subtractPoint|UserId|" + userId + "|Point|" + point + "|ExecuteTime|" + proc);
@@ -140,7 +145,6 @@ public class LotusController {
             long start = System.currentTimeMillis();
             log.info("getPointHistory|UserId|" + userId + "|Page|" + page + "|size|" + size + "|START");
             ListPointHistoryDTO listPointHistoryDTO = new ListPointHistoryDTO();
-
             if (!userService.checkExistUser(userId)) {
                 listPointHistoryDTO.setStatusCode(404);
                 listPointHistoryDTO.setDesc("UserId does not exist!");

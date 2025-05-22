@@ -20,6 +20,17 @@ public class PointHistory {
         ADD, SUBTRACT
     }
 
+    public PointHistory(User user, ActionType actionType, int point, String note) {
+        this.user = user;
+        this.actionType = actionType;
+        this.point = point;
+        this.note = note;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public PointHistory() {
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

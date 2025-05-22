@@ -28,14 +28,14 @@ public class CacheService {
 
     @CachePut(cacheNames = "rc24h", key = "'UserInfo:'+#userId")
     public UserLotusDTO updateUserInfo(Long userId, int extraPoint, String action) {
-        UserLotusDTO user = userService.getUserLotusDTO(userId);
-        log.info("updateUserInfo|UserId|" + userId + "|" + user.getLotusPoint() + "|Point|" + extraPoint);
+        UserLotusDTO userLotusDTO = userService.getUserLotusDTO(userId);
+        log.info("updateUserInfo|UserId|" + userId + "|" + userLotusDTO.getLotusPoint() + "|Point|" + extraPoint);
         if (action.equals("add")) {
-            user.setLotusPoint(user.getLotusPoint() + extraPoint);
+            userLotusDTO.setLotusPoint(userLotusDTO.getLotusPoint() + extraPoint);
         } else {
-            user.setLotusPoint(user.getLotusPoint() - extraPoint);
+            userLotusDTO.setLotusPoint(userLotusDTO.getLotusPoint() - extraPoint);
         }
-        return user;
+        return userLotusDTO;
     }
 
     @CacheEvict(cacheNames = "rc24h", key = "'ListAttendance:'+#userId")
@@ -55,5 +55,12 @@ public class CacheService {
     @CachePut(cacheNames = "rc24h", key = "'isUserExist:'+#userId")
     public boolean updateCacheUserExist(Long userId, boolean isExist) {
         return isExist;
+    }
+
+    @CachePut(cacheNames = "rc24h", key = "'UserInfo:'+#userId")
+    public UserLotusDTO updateUserInfo(Long userId, int point) {
+        UserLotusDTO userLotusDTO = userService.getUserLotusDTO(userId);
+        userLotusDTO.setLotusPoint(point);
+        return userLotusDTO;
     }
 }
